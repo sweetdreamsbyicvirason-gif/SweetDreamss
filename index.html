@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sweet Dreams by Ivirason - Business Tracker</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        /* Add animation for the bear */
+        @keyframes gentle-wave {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(10deg) scale(1.1); }
+        }
+        .header-bear {
+            display: inline-block; /* Needed for transform */
+            animation: gentle-wave 2.5s ease-in-out infinite;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcf9fa; /* Very very light pink/off-white */
+            /* Cute polka dot background */
+            background-image: radial-gradient(circle, #fdeaf1 1px, rgba(0,0,0,0) 1px);
+            background-size: 28px 28px;
+        }
+        /* Custom Theme Colors */
+        .pink-primary { background-color: #FFC0CB; } /* Baby Pink */
+        .pink-text { color: #D47D9B; } /* Darker Pink for text */
+        .blue-accent { background-color: #ADD8E6; } /* Soft Blue Accent */
+        .blue-dark-text { color: #4169E1; } /* Royal Blue for contrast */
+        .bear-brown { color: #A0522D; } /* Sienna/Brown for bear details */
+        .pink-bear { color: #FF69B4; } /* Hot Pink for cuter bear details */
+        .bg-bear-light { background-color: #fdf5f0; } /* Creamy background for inputs */
+        
+        /* Button Styling */
+        .btn-primary { 
+            background-color: #4169E1; 
+            color: white; 
+            transition: transform 0.2s, box-shadow 0.2s; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary:hover { 
+            background-color: #6495ED; 
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary { 
+            background-color: #FFC0CB; 
+            color: #4169E1; 
+            border: 2px solid #4169E1; 
+            transition: transform 0.2s, box-shadow 0.2s; 
+        }
+        .btn-secondary:hover { 
+            background-color: #ff91a5; 
+            transform: translateY(-1px);
+        }
+        
+        .btn-cancel {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+        .btn-cancel:hover {
+            background-color: #e2e8f0;
+        }
+
+        .card-header {
+            border-bottom: 2px solid #FFC0CB;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .input-style {
+            background-color: #fdf5f0; /* Creamy color */
+            border: 2px solid #ADD8E6;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+        }
+        
+        /* Cuter Cloud Tab Styling */
+        nav {
+            border-bottom: 2px solid #ffdde5;
+            padding: 0 1rem;
+            position: relative;
+            top: 2px;
+        }
+        .tab-button {
+            background: transparent;
+            border: none;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            color: #bca0ad; /* Muted pink */
+            cursor: pointer;
+            transition: all 0.3s ease-out;
+            position: relative;
+            border-radius: 20px 20px 0 0;
+            margin: 0 2px;
+        }
+        .tab-button:hover {
+            color: #D47D9B;
+            background-color: #fff0f3;
+        }
+        .tab-button.active {
+            background-color: #ffffff;
+            color: #D47D9B;
+            box-shadow: 0 -6px 15px rgba(212, 125, 155, 0.15);
+            transform: translateY(-8px);
+            border: 2px solid #ffdde5;
+            border-bottom: 2px solid #ffffff; /* Cover the nav border */
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* NEW cute card style */
+        .cute-card {
+            border-radius: 1.5rem !important; /* 24px */
+            border-style: dashed !important;
+            box-shadow: 0 8px 25px rgba(212, 125, 155, 0.1) !important;
+        }
+
+        /* Adjust tab content position */
+        main {
+            padding-top: 1rem;
+        }
+    </style>
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, orderBy, serverTimestamp, runTransaction, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        // IMPORTANT: When hosting this on a live URL (like GitHub Pages),
+        // you MUST replace the placeholder values below with your own Firebase project's configuration.
+        // You can get this from your Firebase project settings -> General -> Your apps -> Web app.
+        const firebaseConfigPlaceholder = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Global Firebase Variables - REQUIRED for Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sweet-dreams-default';
+        // Use the environment's config if available (in Canvas), otherwise use the placeholder above.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : firebaseConfigPlaceholder;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        setLogLevel('Debug');
+        let app, db, auth, currentUserId;
+        let tailorOutstandingBalance = 0;
+        let processorOutstandingBalance = 0;
+
+        // --- CONSTANTS ---
+        const DAILY_RECORDS_COLLECTION = `artifacts/${appId}/public/data/daily_records`;
+        const INVENTORY_DOC_PATH = `artifacts/${appId}/public/data/inventory/current_stock`;
+        const LABOR_PAYMENTS_COLLECTION = `artifacts/${appId}/public/data/labor_payments`;
+        const ORDER_TRACKER_COLLECTION = `artifacts/${appId}/public/data/order_tracker`; 
+
+        const OWNER_SHARES = [
+            { name: "Videan", share: 0.40 }, 
+            { name: "Jason", share: 0.30 }, 
+            { name: "Ivy", share: 0.20 },   
+            { name: "Rei", share: 0.10 }    
+        ];
+        const SELLING_PRICE = 220.00;
+        const FOAM_COST = 169.88;
+        const TAILOR_RATE = 17.00;
+        const PROCESSOR_RATE = 15.00;
+
+        // --- UTILITY & UI FUNCTIONS ---
+        const formatPHP = (amount) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+        
+        const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+        const switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-content-${tabName}`).classList.add('active');
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        };
+        
+        // --- FIREBASE INITIALIZATION & AUTH ---
+        const initFirebase = async () => {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                document.getElementById('date').value = getTodayDate();
+                document.getElementById('orderDueDate').value = getTodayDate();
+                switchTab('productivity'); // Set default tab
+
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    // For the live GitHub version, we'll just sign in anonymously.
+                    // If you needed specific user accounts, you'd implement Firebase Auth UI here.
+                    await signInAnonymously(auth);
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUserId = user.uid;
+                        document.getElementById('user-info').textContent = `User ID: ${currentUserId}`;
+                        setupListeners();
+                    } else {
+                        document.getElementById('user-info').textContent = `User ID: Not Signed In`;
+                    }
+                });
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                // Display a user-friendly error on the page
+                const body = document.querySelector('body');
+                body.innerHTML = `<div class="p-8 text-center bg-red-100 text-red-800 rounded-lg max-w-lg mx-auto mt-10">
+                    <h2 class="text-2xl font-bold">Firebase Connection Error 🐻</h2>
+                    <p class="mt-2">The tracker could not connect to the database. This usually means the Firebase configuration is missing or incorrect in the HTML file.</p>
+                    <p class="mt-4 font-semibold">Please make sure you have replaced the placeholder values (like "YOUR_API_KEY") in the \`firebaseConfigPlaceholder\` variable inside the script tag.</p>
+                </div>`;
+            }
+        };
+
+        // --- DATA LISTENERS ---
+        const setupListeners = () => {
+            onSnapshot(doc(db, INVENTORY_DOC_PATH), (docSnap) => {
+                const inventory = docSnap.exists() ? docSnap.data() : {
+                    totalCoversInStock: 0, stockFoam: 0, stockFinishedProducts: 0, coverDesigns: {}
+                };
+                renderInventory(inventory);
+            }, (error) => console.error("Error fetching inventory:", error));
+
+            const recordsQuery = query(collection(db, DAILY_RECORDS_COLLECTION), orderBy('timestamp', 'desc'));
+            onSnapshot(recordsQuery, (snapshot) => {
+                const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                const paymentsQuery = query(collection(db, LABOR_PAYMENTS_COLLECTION), orderBy('timestamp', 'desc'));
+                onSnapshot(paymentsQuery, (paymentSnapshot) => {
+                    const payments = paymentSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderDashboard(records, payments);
+                    renderRecordsHistory(records);
+                    renderPaymentsHistory(payments);
+                }, (error) => console.error("Error fetching payments:", error));
+
+            }, (error) => console.error("Error fetching daily records:", error));
+            
+            const ordersQuery = query(collection(db, ORDER_TRACKER_COLLECTION), orderBy('dueDate', 'asc'));
+            onSnapshot(ordersQuery, (snapshot) => {
+                const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderOrders(orders);
+            }, (error) => console.error("Error fetching orders:", error));
+        };
+
+        // --- UI RENDERING ---
+        const renderInventory = (inventory) => {
+            document.getElementById('stock-covers').textContent = inventory.totalCoversInStock || 0;
+            document.getElementById('stock-foam').textContent = inventory.stockFoam || 0;
+            document.getElementById('stock-products').textContent = inventory.stockFinishedProducts || 0;
+            
+            const designs = inventory.coverDesigns || {};
+            const designsContainer = document.getElementById('cover-designs-detail');
+            designsContainer.innerHTML = '';
+            
+            const designKeys = Object.keys(designs).sort();
+            if (designKeys.length === 0) {
+                 designsContainer.innerHTML = `<p class="text-sm text-gray-500 italic">No designs tracked yet.</p>`;
+            } else {
+                designKeys.forEach(key => {
+                    designsContainer.innerHTML += `
+                        <div class="flex justify-between items-center text-sm bg-white/50 p-2 rounded-lg">
+                            <span class="text-gray-700">${key}:</span>
+                            <span class="font-bold blue-dark-text">${designs[key]}</span>
+                        </div>`;
+                });
+            }
+        };
+
+        const renderOrders = (orders) => {
+            const ordersBody = document.getElementById('orders-body');
+            ordersBody.innerHTML = '';
+            let totalPendingDemand = 0;
+
+            if (orders.length === 0) {
+                ordersBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-500">No sweet orders currently logged.</td></tr>';
+                document.getElementById('total-pending-demand').textContent = '0';
+                return;
+            }
+
+            orders.forEach(order => {
+                if (order.status === 'Pending') totalPendingDemand += order.quantity;
+                const dueDate = new Date(order.dueDate).toLocaleDateString();
+                const statusClass = order.status === 'Pending' ? 'text-red-500 font-semibold' : 'text-green-600';
+                const completeButton = order.status === 'Pending' 
+                    ? `<button onclick="window.handleCompleteOrder('${order.id}')" class="btn-primary text-xs px-2 py-1 rounded-full shadow-sm">Complete</button>`
+                    : `<span class="text-xs text-green-600 font-medium">✨ Done</span>`;
+                const editableData = { id: order.id, clientName: order.clientName, quantity: order.quantity, dueDate: order.dueDate };
+                const editButton = `<button onclick='window.loadOrderForEdit(${JSON.stringify(editableData)})' class="text-xs bg-blue-accent text-gray-800 px-3 py-1 rounded-full hover:bg-blue-300 transition">Edit 📝</button>`;
+
+                const row = ordersBody.insertRow();
+                row.className = `border-b border-blue-100 hover:bg-pink-50 text-gray-700 ${order.status === 'Pending' ? 'bg-red-50/50' : 'bg-green-50/50'}`;
+                row.innerHTML = `<td class="p-2">${order.clientName}</td><td class="p-2 text-center">${order.quantity}</td><td class="p-2 text-center">${dueDate}</td><td class="p-2 text-center"><span class="${statusClass}">${order.status}</span></td><td class="p-2 text-center">${completeButton}</td><td class="p-2 text-center">${editButton}</td>`;
+            });
+            document.getElementById('total-pending-demand').textContent = totalPendingDemand;
+        };
+
+        const renderPaymentsHistory = (payments) => {
+            const paymentsBody = document.getElementById('payments-body');
+            paymentsBody.innerHTML = '';
+
+            if (payments.length === 0) {
+                paymentsBody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No payments logged yet.</td></tr>';
+                return;
+            }
+            payments.forEach(payment => {
+                const date = new Date(payment.timestamp.seconds * 1000).toLocaleDateString();
+                const editableData = { id: payment.id, amount: payment.amount, recipient: payment.recipient, notes: payment.notes };
+                const row = paymentsBody.insertRow();
+                row.className = 'border-b border-blue-100 hover:bg-blue-50 text-gray-700';
+                row.innerHTML = `<td class="p-2">${date}</td><td class="p-2 text-right font-medium text-green-600">${formatPHP(payment.amount)}</td><td class="p-2 text-left text-sm text-gray-500">${payment.recipient || 'N/A'}: ${payment.notes || 'N/A'}</td><td class="p-2 text-center"><button onclick='window.loadPaymentForEdit(${JSON.stringify(editableData)})' class="text-xs bg-blue-accent text-gray-800 px-3 py-1 rounded-full hover:bg-blue-300 transition">Edit 📝</button></td>`;
+            });
+        };
+
+        const renderDashboard = (records, payments) => {
+            let totalRevenue = 0, totalMaterialCost = 0, totalTailorUnits = 0, totalProcessorUnits = 0;
+            records.forEach(r => {
+                totalTailorUnits += r.tailoredCovers || 0;
+                totalProcessorUnits += r.processorCuts || 0;
+                totalRevenue += (r.productsSold || 0) * SELLING_PRICE;
+                totalMaterialCost += (r.productsSold || 0) * FOAM_COST;
+            });
+
+            const totalTailorLiability = totalTailorUnits * TAILOR_RATE;
+            const totalProcessorLiability = totalProcessorUnits * PROCESSOR_RATE; 
+            const totalLaborCostIncurred = totalTailorLiability + totalProcessorLiability;
+
+            let totalTailorPaid = payments.filter(p => p.recipient === 'Tailor').reduce((s, p) => s + p.amount, 0);
+            let totalProcessorPaid = payments.filter(p => p.recipient === 'Processor').reduce((s, p) => s + p.amount, 0);
+            let totalGeneralPaid = payments.filter(p => p.recipient === 'General').reduce((s, p) => s + p.amount, 0);
+
+            const ratio = totalLaborCostIncurred > 0 ? { t: totalTailorLiability / totalLaborCostIncurred, p: totalProcessorLiability / totalLaborCostIncurred } : { t: 0.5, p: 0.5 };
+            totalTailorPaid += totalGeneralPaid * ratio.t;
+            totalProcessorPaid += totalGeneralPaid * ratio.p;
+            
+            const totalLaborPaid = payments.reduce((s, p) => s + p.amount, 0);
+            const tailorOutstanding = totalTailorLiability - totalTailorPaid;
+            const processorOutstanding = totalProcessorLiability - totalProcessorPaid;
+            tailorOutstandingBalance = tailorOutstanding;
+            processorOutstandingBalance = processorOutstanding;
+            
+            const outstandingLiability = totalLaborCostIncurred - totalLaborPaid; 
+            const netProfit = totalRevenue - totalMaterialCost - totalLaborCostIncurred;
+
+            ['tailor-incurred', 'processor-incurred'].forEach((id, i) => document.getElementById(id).textContent = formatPHP(i === 0 ? totalTailorLiability : totalProcessorLiability));
+            ['tailor-paid', 'processor-paid'].forEach((id, i) => document.getElementById(id).textContent = formatPHP(i === 0 ? totalTailorPaid : totalProcessorPaid));
+            ['tailor-outstanding', 'processor-outstanding'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                const val = i === 0 ? tailorOutstanding : processorOutstanding;
+                el.textContent = formatPHP(val);
+                el.className = `text-lg font-extrabold mt-2 ${val > 0 ? 'text-red-700' : 'text-green-600'}`;
+            });
+            const laborEl = document.getElementById('labor-outstanding');
+            laborEl.textContent = formatPHP(outstandingLiability);
+            laborEl.className = `text-4xl font-extrabold ${outstandingLiability > 0 ? 'text-red-500' : 'text-green-600'}`;
+
+            document.getElementById('total-revenue').textContent = formatPHP(totalRevenue);
+            document.getElementById('total-cogs').textContent = formatPHP(totalMaterialCost);
+            document.getElementById('net-profit').textContent = formatPHP(netProfit);
+
+            const sharesContainer = document.getElementById('owner-shares');
+            sharesContainer.innerHTML = '';
+            OWNER_SHARES.forEach(owner => {
+                sharesContainer.innerHTML += `<p class="flex justify-between items-center text-lg font-semibold border-b border-pink-100 p-2"><span>${owner.name} (${(owner.share * 100).toFixed(0)}%):</span><span class="blue-dark-text font-extrabold">${formatPHP(netProfit * owner.share)}</span></p>`;
+            });
+        };
+
+        // --- FORM EDITING LOGIC ---
+        const loadRecordForEdit = (data) => {
+            switchTab('productivity');
+            document.getElementById('date').value = data.date;
+            document.getElementById('tailoredCovers').value = data.tailoredCovers;
+            document.getElementById('processorCuts').value = data.processorCuts;
+            document.getElementById('completedMattresses').value = data.completedMattresses;
+            document.getElementById('productsSold').value = data.productsSold;
+            
+            const statusEl = document.getElementById('status-message-daily');
+            statusEl.textContent = `✏️ Loaded record for ${data.date}. Edit and submit to update.`;
+            statusEl.className = 'text-sm font-bold text-pink-text';
+            document.getElementById('daily-entry-form').scrollIntoView({ behavior: 'smooth' });
+        };
+        const loadPaymentForEdit = (data) => {
+            switchTab('salary');
+            document.getElementById('paymentId').value = data.id;
+            document.getElementById('paymentAmount').value = data.amount;
+            document.getElementById('paymentRecipient').value = data.recipient;
+            document.getElementById('paymentNotes').value = data.notes;
+            document.getElementById('payment-submit-btn').textContent = 'Update Payment';
+            document.getElementById('cancel-payment-edit').classList.remove('hidden');
+            const statusEl = document.getElementById('status-payment');
+            statusEl.textContent = `✏️ Editing payment. Click 'Update' to save.`;
+            statusEl.className = 'text-sm font-bold text-pink-text';
+        };
+        const loadOrderForEdit = (data) => {
+            switchTab('orders');
+            document.getElementById('orderId').value = data.id;
+            document.getElementById('clientName').value = data.clientName;
+            document.getElementById('orderQuantity').value = data.quantity;
+            document.getElementById('orderDueDate').value = data.dueDate;
+            document.getElementById('order-submit-btn').textContent = 'Update Order';
+            document.getElementById('cancel-order-edit').classList.remove('hidden');
+            const statusEl = document.getElementById('status-message-order');
+            statusEl.textContent = `✏️ Editing order. Click 'Update' to save.`;
+            statusEl.className = 'text-sm font-bold text-pink-text';
+        };
+        const resetPaymentForm = () => {
+            document.getElementById('payment-form').reset();
+            document.getElementById('paymentId').value = '';
+            document.getElementById('payment-submit-btn').textContent = 'Log Payment';
+            document.getElementById('cancel-payment-edit').classList.add('hidden');
+            document.getElementById('status-payment').classList.add('hidden');
+        };
+        const resetOrderForm = () => {
+            document.getElementById('order-form').reset();
+            document.getElementById('orderId').value = '';
+            document.getElementById('order-submit-btn').textContent = 'Log Order';
+            document.getElementById('cancel-order-edit').classList.add('hidden');
+            document.getElementById('status-message-order').classList.add('hidden');
+            document.getElementById('orderDueDate').value = getTodayDate();
+        };
+
+        const renderRecordsHistory = (records) => {
+            const historyBody = document.getElementById('history-body');
+            historyBody.innerHTML = '';
+            if (records.length === 0) {
+                historyBody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-gray-500">No daily production records yet.</td></tr>';
+                return;
+            }
+            records.forEach(record => {
+                const date = record.date || (record.timestamp ? new Date(record.timestamp.seconds * 1000).toLocaleDateString() : 'N/A');
+                const tailorLabor = (record.tailoredCovers || 0) * TAILOR_RATE;
+                const processorLabor = (record.processorCuts || 0) * PROCESSOR_RATE;
+                const totalLaborIncurred = tailorLabor + processorLabor;
+                const revenue = (record.productsSold || 0) * SELLING_PRICE;
+                const editableData = { date: record.date, tailoredCovers: record.tailoredCovers || 0, processorCuts: record.processorCuts || 0, completedMattresses: record.completedMattresses || 0, productsSold: record.productsSold || 0 };
+                const row = historyBody.insertRow();
+                row.className = 'border-b border-blue-100 hover:bg-blue-50 text-gray-700';
+                row.innerHTML = `<td class="p-2">${date}</td><td class="p-2 text-center">${record.tailoredCovers || 0}</td><td class="p-2 text-center">${record.processorCuts || 0}</td><td class="p-2 text-center">${record.completedMattresses || 0}</td><td class="p-2 text-center">${record.productsSold || 0}</td><td class="p-2 text-right font-medium">${formatPHP(revenue)}</td><td class="p-2 text-right">${formatPHP(totalLaborIncurred)}</td><td class="p-2 text-center"><button onclick='window.loadRecordForEdit(${JSON.stringify(editableData)})' class="text-xs bg-blue-accent text-gray-800 px-3 py-1 rounded-full hover:bg-blue-300 transition">Edit 📝</button></td>`;
+            });
+        };
+
+        // --- DATA SUBMISSION LOGIC ---
+        const handleDailyEntry = async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const date = form.date.value;
+            const dailyData = {
+                tailoredCovers: parseInt(form.tailoredCovers.value || 0),
+                processorCuts: parseInt(form.processorCuts.value || 0),
+                completedMattresses: parseInt(form.completedMattresses.value || 0),
+                productsSold: parseInt(form.productsSold.value || 0)
+            };
+            const statusEl = document.getElementById('status-message-daily');
+            if (!date || Object.values(dailyData).every(v => v === 0)) {
+                statusEl.textContent = "🐻 Please select a date and enter at least one value.";
+                statusEl.className = 'text-sm text-red-600'; return;
+            }
+            statusEl.classList.add('hidden');
+            document.getElementById('loading-entry').classList.remove('hidden');
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const inventoryRef = doc(db, INVENTORY_DOC_PATH);
+                    const inventoryDoc = await transaction.get(inventoryRef);
+                    const current = inventoryDoc.exists() ? inventoryDoc.data() : { totalCoversInStock: 0, stockFoam: 0, stockFinishedProducts: 0, coverDesigns: {} };
+                    const dailyRef = doc(db, DAILY_RECORDS_COLLECTION, date);
+                    const oldRecord = await transaction.get(dailyRef);
+                    const old = oldRecord.exists() ? oldRecord.data() : { tailoredCovers: 0, processorCuts: 0, completedMattresses: 0, productsSold: 0 };
+                    
+                    const delta = {
+                        covers: dailyData.tailoredCovers - (old.tailoredCovers || 0),
+                        cuts: dailyData.processorCuts - (old.processorCuts || 0),
+                        completed: dailyData.completedMattresses - (old.completedMattresses || 0),
+                        sold: dailyData.productsSold - (old.productsSold || 0)
+                    };
+
+                    transaction.set(inventoryRef, {
+                        totalCoversInStock: Math.max(0, (current.totalCoversInStock || 0) + delta.covers - delta.completed),
+                        stockFoam: Math.max(0, (current.stockFoam || 0) + delta.cuts - delta.completed),
+                        stockFinishedProducts: Math.max(0, (current.stockFinishedProducts || 0) + delta.completed - delta.sold),
+                        coverDesigns: current.coverDesigns || {}
+                    });
+                    transaction.set(dailyRef, { ...dailyData, date: date, timestamp: serverTimestamp() });
+                });
+                statusEl.textContent = `✨ Daily entry for ${date} UPDATED successfully!`;
+                statusEl.className = 'text-sm text-green-600';
+                ['tailoredCovers', 'processorCuts', 'completedMattresses', 'productsSold'].forEach(id => form[id].value = 0);
+            } catch (error) {
+                console.error("Error in daily entry transaction:", error);
+                statusEl.textContent = `Transaction failed: ${error.message}.`;
+                statusEl.className = 'text-sm text-red-600';
+            } finally {
+                document.getElementById('loading-entry').classList.add('hidden');
+            }
+        };
+        
+        const handleSalaryPayment = async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const paymentData = {
+                amount: parseFloat(form.paymentAmount.value),
+                recipient: form.paymentRecipient.value,
+                notes: form.paymentNotes.value
+            };
+            const paymentId = form.paymentId.value;
+            const statusEl = document.getElementById('status-payment');
+            if (isNaN(paymentData.amount) || paymentData.amount <= 0 || !paymentData.recipient) {
+                statusEl.textContent = "⚠️ Please enter a valid amount and recipient.";
+                statusEl.className = 'text-sm text-red-600'; return;
+            }
+            document.getElementById('loading-payment').classList.remove('hidden');
+            
+            try {
+                if (paymentId) {
+                    await updateDoc(doc(db, LABOR_PAYMENTS_COLLECTION, paymentId), { ...paymentData, timestamp: serverTimestamp() });
+                    statusEl.textContent = `💖 Payment log UPDATED successfully!`;
+                } else {
+                    await addDoc(collection(db, LABOR_PAYMENTS_COLLECTION), { ...paymentData, timestamp: serverTimestamp() });
+                    statusEl.textContent = `💖 Payment of ${formatPHP(paymentData.amount)} logged!`;
+                }
+                statusEl.className = 'text-sm text-green-600';
+                resetPaymentForm();
+            } catch (error) {
+                console.error("Error logging salary payment:", error);
+                statusEl.textContent = `Payment failed: ${error.message}.`;
+                statusEl.className = 'text-sm text-red-600';
+            } finally {
+                document.getElementById('loading-payment').classList.add('hidden');
+            }
+        };
+        
+        const handleRecipientChange = () => {
+            if (document.getElementById('paymentId').value) return; // Don't autofill in edit mode
+            const recipient = document.getElementById('paymentRecipient').value;
+            const amountInput = document.getElementById('paymentAmount');
+            let amountToPay = 0;
+            if (recipient === 'Tailor') amountToPay = tailorOutstandingBalance;
+            else if (recipient === 'Processor') amountToPay = processorOutstandingBalance;
+            else if (recipient === 'General') amountToPay = tailorOutstandingBalance + processorOutstandingBalance;
+            amountInput.value = Math.max(0, amountToPay).toFixed(2);
+        };
+        
+        const handleNewOrder = async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const orderData = {
+                clientName: form.clientName.value.trim() || 'Sweet Client',
+                quantity: parseInt(form.orderQuantity.value || 0),
+                dueDate: form.orderDueDate.value
+            };
+            const orderId = form.orderId.value;
+            const statusEl = document.getElementById('status-message-order');
+            if (orderData.quantity <= 0 || !orderData.dueDate) {
+                statusEl.textContent = "⚠️ Quantity must be > 0 and Due Date is required.";
+                statusEl.className = 'text-sm text-red-600'; return;
+            }
+            document.getElementById('loading-order').classList.remove('hidden');
+
+            try {
+                if (orderId) {
+                    await updateDoc(doc(db, ORDER_TRACKER_COLLECTION, orderId), { ...orderData, timestamp: serverTimestamp() });
+                    statusEl.textContent = `🎉 Order UPDATED successfully!`;
+                } else {
+                    await addDoc(collection(db, ORDER_TRACKER_COLLECTION), { ...orderData, status: 'Pending', timestamp: serverTimestamp() });
+                    statusEl.textContent = `🎉 Order for ${orderData.quantity} units logged!`;
+                }
+                statusEl.className = 'text-sm text-green-600';
+                resetOrderForm();
+            } catch (error) {
+                console.error("Error logging new order:", error);
+                statusEl.textContent = `Order failed: ${error.message}.`;
+                statusEl.className = 'text-sm text-red-600';
+            } finally {
+                document.getElementById('loading-order').classList.add('hidden');
+            }
+        };
+        
+        const handleCompleteOrder = async (orderId) => {
+            const confirmBox = document.createElement('div');
+            confirmBox.className = 'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 z-50';
+            confirmBox.innerHTML = `<div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full"><h3 class="text-xl font-bold mb-3 text-pink-text">🐻 Confirm Completion</h3><p class="mb-4 text-gray-700">Mark this order as **Completed**?</p><div class="flex justify-end space-x-3"><button id="cancel-btn" class="px-4 py-2 text-gray-600 border rounded-lg hover:bg-gray-100">Cancel</button><button id="confirm-btn" class="px-4 py-2 btn-primary rounded-lg">Confirm</button></div></div>`;
+            document.body.appendChild(confirmBox);
+            document.getElementById('cancel-btn').onclick = () => document.body.removeChild(confirmBox);
+            document.getElementById('confirm-btn').onclick = async () => {
+                document.body.removeChild(confirmBox);
+                try {
+                    await updateDoc(doc(db, ORDER_TRACKER_COLLECTION, orderId), { status: 'Completed', completionDate: getTodayDate() });
+                } catch (error) {
+                    console.error("Error completing order:", error);
+                }
+            };
+        }
+        
+        const toggleCoverManager = () => {
+            const manager = document.getElementById('cover-manager');
+            manager.classList.toggle('hidden');
+            if (!manager.classList.contains('hidden')) {
+                loadCoverDesignsForManagement();
+            }
+        };
+        
+        const loadCoverDesignsForManagement = () => {
+            onSnapshot(doc(db, INVENTORY_DOC_PATH), (docSnap) => {
+                const designs = (docSnap.exists() ? docSnap.data().coverDesigns : {}) || {};
+                const list = document.getElementById('current-design-list');
+                list.innerHTML = '';
+                const designKeys = Object.keys(designs).sort();
+                if (designKeys.length === 0) {
+                     list.innerHTML = `<p class="text-sm text-gray-500 italic text-center">No designs to manage.</p>`;
+                }
+                designKeys.forEach(key => {
+                    list.innerHTML += `<div class="flex items-center justify-between p-2 mb-2 bg-bear-light rounded-lg border border-pink-100"><span class="text-gray-700 font-semibold">${key}</span><div class="flex items-center space-x-2"><input type="number" id="qty-${key.replace(/\s/g, '_')}" value="${designs[key]}" min="0" class="w-16 p-1 text-center border rounded-lg text-sm input-style"><button onclick="window.updateCoverDesignStock('${key}', document.getElementById('qty-${key.replace(/\s/g, '_')}).value)" class="text-xs bg-pink-primary text-gray-800 p-2 rounded-lg hover:bg-pink-300 transition">Update</button></div></div>`;
+                });
+            }, (error) => console.error("Error fetching cover designs:", error));
+        };
+        
+        const handleNewDesign = async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const designName = form.designName.value.trim().replace(/[^a-zA-Z0-9\s]/g, '');
+            const initialStock = parseInt(form.initialStock.value || 0);
+            const statusEl = document.getElementById('design-status-message');
+            if (!designName || initialStock < 0) {
+                statusEl.textContent = "⚠️ Please enter a valid name and non-negative stock.";
+                statusEl.className = 'text-sm text-red-600'; return;
+            }
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const invRef = doc(db, INVENTORY_DOC_PATH);
+                    const invDoc = await transaction.get(invRef);
+                    const current = invDoc.exists() ? invDoc.data() : { totalCoversInStock: 0, coverDesigns: {} };
+                    const newDesigns = { ...(current.coverDesigns || {}), [designName]: initialStock };
+                    transaction.set(invRef, { ...current, totalCoversInStock: Object.values(newDesigns).reduce((s, q) => s + q, 0), coverDesigns: newDesigns });
+                });
+                statusEl.textContent = `🎉 Design '${designName}' added successfully!`;
+                statusEl.className = 'text-sm text-green-600';
+                form.reset();
+            } catch (error) {
+                console.error("Error adding new design:", error);
+                statusEl.textContent = `Failed to add design: ${error.message}`;
+                statusEl.className = 'text-sm text-red-600';
+            }
+        };
+
+        const updateCoverDesignStock = async (designName, newQuantity) => {
+            const statusEl = document.getElementById('design-status-message');
+            const quantity = parseInt(newQuantity);
+            if (isNaN(quantity) || quantity < 0) {
+                 statusEl.textContent = "⚠️ Invalid quantity.";
+                 statusEl.className = 'text-sm text-red-600'; return;
+            }
+            try {
+                 await runTransaction(db, async (transaction) => {
+                     const invRef = doc(db, INVENTORY_DOC_PATH);
+                     const invDoc = await transaction.get(invRef);
+                     const current = invDoc.exists() ? invDoc.data() : { totalCoversInStock: 0, coverDesigns: {} };
+                     const newDesigns = { ...(current.coverDesigns || {}), [designName]: quantity };
+                     transaction.set(invRef, { ...current, totalCoversInStock: Object.values(newDesigns).reduce((s, q) => s + q, 0), coverDesigns: newDesigns });
+                 });
+                 statusEl.textContent = `✨ Stock for '${designName}' updated!`;
+                 statusEl.className = 'text-sm text-green-600';
+            } catch (error) {
+                 console.error("Error updating design stock:", error);
+                 statusEl.textContent = `Failed to update: ${error.message}`;
+                 statusEl.className = 'text-sm text-red-600';
+            }
+        }
+
+        window.onload = initFirebase;
+        window.switchTab = switchTab;
+        window.loadRecordForEdit = loadRecordForEdit; window.loadPaymentForEdit = loadPaymentForEdit; window.loadOrderForEdit = loadOrderForEdit;
+        window.resetPaymentForm = resetPaymentForm; window.resetOrderForm = resetOrderForm;
+        window.handleDailyEntry = handleDailyEntry; window.handleSalaryPayment = handleSalaryPayment;
+        window.handleNewOrder = handleNewOrder; window.handleCompleteOrder = handleCompleteOrder; 
+        window.toggleCoverManager = toggleCoverManager; window.handleNewDesign = handleNewDesign; 
+        window.updateCoverDesignStock = updateCoverDesignStock; window.handleRecipientChange = handleRecipientChange;
+    </script>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="text-center mb-6">
+        <h1 class="text-5xl font-extrabold pink-text flex justify-center items-center">
+            <span class="text-2xl bear-brown mr-2 header-bear">🐻</span> Sweet Dreams
+        </h1>
+        <p class="text-xl text-gray-500">Business Production, Salary, & Profit Tracker by Ivirason</p>
+        <p id="user-info" class="text-xs text-gray-400 mt-2"></p>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="flex flex-wrap justify-center mb-6">
+        <button data-tab="productivity" onclick="switchTab('productivity')" class="tab-button font-semibold text-gray-600 hover:bg-white">🐾 Productivity</button>
+        <button data-tab="orders" onclick="switchTab('orders')" class="tab-button font-semibold text-gray-600 hover:bg-white">💖 Orders</button>
+        <button data-tab="salary" onclick="switchTab('salary')" class="tab-button font-semibold text-gray-600 hover:bg-white">🧸 Salary</button>
+        <button data-tab="inventory" onclick="switchTab('inventory')" class="tab-button font-semibold text-gray-600 hover:bg-white">🍯 Inventory</button>
+        <button data-tab="profit" onclick="switchTab('profit')" class="tab-button font-semibold text-gray-600 hover:bg-white">⭐ Profit</button>
+        <button data-tab="history" onclick="switchTab('history')" class="tab-button font-semibold text-gray-600 hover:bg-white">📝 History</button>
+    </nav>
+    
+    <main class="max-w-7xl mx-auto">
+        <!-- PRODUCTIVITY TAB -->
+        <div id="tab-content-productivity" class="tab-content">
+            <div class="max-w-xl mx-auto">
+                <div class="cute-card bg-white p-6 rounded-xl shadow-lg border-2 border-pink-primary">
+                    <h2 class="text-2xl font-bold pink-text card-header flex items-center"><span class="text-2xl bear-brown mr-2">🐾</span> Daily Production & Sales</h2>
+                    <form id="daily-entry-form" onsubmit="window.handleDailyEntry(event)" class="space-y-4">
+                        <div>
+                            <label for="date" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="date" name="date" required class="mt-1 block w-full rounded-lg input-style">
+                        </div>
+                        <div class="pt-2 border-t border-blue-accent/50">
+                            <p class="text-sm font-bold text-gray-700 mb-1">Employee Output</p>
+                            <label for="tailoredCovers" class="block text-sm font-medium text-gray-700">Tailor Output (Covers @ P17)</label>
+                            <input type="number" id="tailoredCovers" name="tailoredCovers" min="0" value="0" class="mt-1 block w-full rounded-lg input-style" placeholder="0">
+                            <label for="processorCuts" class="block text-sm font-medium text-gray-700 mt-3">Processor Output (Cuts @ P15)</label>
+                            <input type="number" id="processorCuts" name="processorCuts" min="0" value="0" class="mt-1 block w-full rounded-lg input-style" placeholder="0">
+                        </div>
+                        <div class="pt-2 border-t border-blue-accent/50">
+                            <p class="text-sm font-bold text-gray-700 mb-1">Final Product Tracking</p>
+                            <label for="completedMattresses" class="block text-sm font-medium text-gray-700">Mattresses Assembled</label>
+                            <input type="number" id="completedMattresses" name="completedMattresses" min="0" value="0" class="mt-1 block w-full rounded-lg input-style" placeholder="0">
+                            <label for="productsSold" class="block text-sm font-medium text-gray-700 mt-3">Products Sold (Units @ P220)</label>
+                            <input type="number" id="productsSold" name="productsSold" min="0" value="0" class="mt-1 block w-full rounded-lg input-style" placeholder="0">
+                        </div>
+                        <p id="status-message-daily" class="text-sm font-medium hidden pt-2"></p>
+                        <button type="submit" class="w-full btn-primary py-3 rounded-lg font-semibold text-lg shadow-md hover:shadow-xl">Log Daily Sweetness</button>
+                        <p id="loading-entry" class="text-center text-sm text-gray-500 hidden mt-2">Saving...</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ORDERS TAB -->
+        <div id="tab-content-orders" class="tab-content">
+             <div class="cute-card blue-accent p-6 rounded-xl shadow-lg border-2 border-blue-accent">
+                <h2 class="text-2xl font-bold text-gray-800 card-header flex items-center"><span class="text-2xl text-pink-text mr-2">💖</span> Order Tracker</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-1">
+                        <div class="bg-white p-3 rounded-lg text-center mb-4 border border-red-300">
+                            <p class="text-sm text-gray-500">Total Pending Units</p>
+                            <p id="total-pending-demand" class="text-3xl font-extrabold text-red-600">0</p>
+                        </div>
+                        <form id="order-form" onsubmit="window.handleNewOrder(event)" class="space-y-3">
+                            <h3 class="font-semibold text-gray-700">Log/Edit Order</h3>
+                            <input type="hidden" id="orderId" name="orderId">
+                            <input type="text" id="clientName" name="clientName" class="mt-1 block w-full rounded-lg input-style" placeholder="Client Name">
+                            <div class="flex space-x-2">
+                                <input type="number" id="orderQuantity" name="orderQuantity" min="1" required class="flex-1 rounded-lg input-style" placeholder="Qty">
+                                <input type="date" id="orderDueDate" name="orderDueDate" required class="flex-1 rounded-lg input-style">
+                            </div>
+                            <p id="status-message-order" class="text-sm font-medium hidden pt-2"></p>
+                            <div class="flex flex-col space-y-2">
+                                <button type="submit" id="order-submit-btn" class="w-full btn-primary py-3 rounded-lg font-semibold shadow-md">Log Order</button>
+                                <button type="button" id="cancel-order-edit" onclick="window.resetOrderForm()" class="w-full btn-cancel py-2 rounded-lg font-semibold hidden">Cancel Edit</button>
+                            </div>
+                            <p id="loading-order" class="text-center text-sm text-gray-500 hidden mt-2">Logging...</p>
+                        </form>
+                    </div>
+                    <div class="md:col-span-2">
+                        <h3 class="text-xl font-bold mb-3 text-gray-800">Order List</h3>
+                        <div class="overflow-x-auto bg-white/50 rounded-lg">
+                            <table class="min-w-full divide-y divide-blue-300">
+                                <thead class="text-gray-700">
+                                    <tr>
+                                        <th class="p-2 text-left text-sm font-semibold uppercase">Client</th><th class="p-2 text-center text-sm font-semibold uppercase">Qty</th>
+                                        <th class="p-2 text-center text-sm font-semibold uppercase">Due</th><th class="p-2 text-center text-sm font-semibold uppercase">Status</th>
+                                        <th class="p-2 text-center text-sm font-semibold uppercase">Action</th><th class="p-2 text-center text-sm font-semibold uppercase">Edit</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-body" class="divide-y divide-blue-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SALARY TAB -->
+        <div id="tab-content-salary" class="tab-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="cute-card bg-white p-6 rounded-xl shadow-lg border-2 border-blue-accent">
+                    <h2 class="text-2xl font-bold blue-dark-text card-header flex items-center"><span class="text-2xl pink-bear mr-2">🧸</span> Salary Status</h2>
+                    <div class="bg-pink-100 p-4 rounded-xl shadow-md mb-4 border border-pink-text">
+                        <p class="font-bold text-lg pink-text">Tailor Status (P17/cover)</p>
+                        <div class="flex justify-between text-sm mt-1"><span>Liability Incurred:</span><span id="tailor-incurred" class="font-medium text-red-600">P0.00</span></div>
+                        <div class="flex justify-between text-sm"><span>Total Paid Out:</span><span id="tailor-paid" class="font-medium text-green-600">P0.00</span></div>
+                        <div class="flex justify-between font-extrabold mt-2"><span>PENDING PAYOUT:</span><span id="tailor-outstanding" class="text-lg text-red-700">P0.00</span></div>
+                    </div>
+                    <div class="bg-blue-accent/50 p-4 rounded-xl shadow-md mb-6 border border-blue-dark-text">
+                        <p class="font-bold text-lg blue-dark-text">Processor Status (P15/cut)</p>
+                        <div class="flex justify-between text-sm mt-1"><span>Liability Incurred:</span><span id="processor-incurred" class="font-medium text-red-600">P0.00</span></div>
+                        <div class="flex justify-between text-sm"><span>Total Paid Out:</span><span id="processor-paid" class="font-medium text-green-600">P0.00</span></div>
+                        <div class="flex justify-between font-extrabold mt-2"><span>PENDING PAYOUT:</span><span id="processor-outstanding" class="text-lg text-red-700">P0.00</span></div>
+                    </div>
+                    <div class="blue-accent p-5 rounded-lg shadow-inner text-center">
+                        <p class="text-lg font-semibold text-gray-800">Total Company Liability Remaining</p>
+                        <p id="labor-outstanding" class="text-4xl font-extrabold text-red-500">P0.00</p>
+                    </div>
+                </div>
+                <div class="cute-card bg-white p-6 rounded-xl shadow-lg border-2 border-pink-primary">
+                    <h3 class="text-xl font-bold mb-3 text-gray-800 card-header">Log Salary Payment</h3>
+                    <form id="payment-form" onsubmit="window.handleSalaryPayment(event)" class="space-y-3">
+                        <input type="hidden" id="paymentId" name="paymentId">
+                        <label for="paymentRecipient" class="block text-sm font-medium text-gray-700">Recipient</label>
+                        <select id="paymentRecipient" name="paymentRecipient" required class="mt-1 block w-full rounded-lg input-style" onchange="window.handleRecipientChange()"><option value="">-- Select --</option><option value="General">General (Split)</option><option value="Tailor">Tailor</option><option value="Processor">Processor</option></select>
+                        <label for="paymentAmount" class="block text-sm font-medium text-gray-700">Amount Paid</label>
+                        <input type="number" id="paymentAmount" name="paymentAmount" min="0.01" step="0.01" required class="mt-1 block w-full rounded-lg input-style" placeholder="e.g., 5000">
+                        <label for="paymentNotes" class="block text-sm font-medium text-gray-700">Notes</label>
+                        <input type="text" id="paymentNotes" name="paymentNotes" class="mt-1 block w-full rounded-lg input-style" placeholder="e.g., Weekly Pay">
+                        <p id="status-payment" class="text-sm font-medium hidden pt-2"></p>
+                        <div class="flex flex-col space-y-2 pt-2">
+                            <button type="submit" id="payment-submit-btn" class="w-full btn-secondary py-3 rounded-lg font-semibold text-lg shadow-md hover:shadow-xl">Log Payment</button>
+                            <button type="button" id="cancel-payment-edit" onclick="window.resetPaymentForm()" class="w-full btn-cancel py-2 rounded-lg font-semibold hidden">Cancel Edit</button>
+                        </div>
+                        <p id="loading-payment" class="text-center text-sm text-gray-500 hidden mt-2">Logging...</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- INVENTORY TAB -->
+        <div id="tab-content-inventory" class="tab-content">
+             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="cute-card pink-primary p-6 rounded-xl shadow-lg border-2 border-pink-primary">
+                    <h2 class="text-2xl font-bold text-gray-800 card-header flex items-center"><span class="text-2xl bear-brown mr-2">🍯</span> Inventory</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center text-lg bg-white/70 p-3 rounded-lg shadow-sm"><span>Total Tailored Covers:</span><span id="stock-covers" class="font-bold blue-dark-text">0</span></div>
+                        <div class="border-t border-pink-300 pt-3">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-2 flex items-center justify-between">Cover Designs <span class="pink-bear">🧸</span><button onclick="window.toggleCoverManager()" class="text-xs bg-white text-gray-800 px-3 py-1 rounded-full border border-pink-text hover:bg-pink-100 transition">Manage</button></h4>
+                            <div id="cover-designs-detail" class="space-y-1"></div>
+                        </div>
+                        <div class="flex justify-between items-center text-lg bg-white/70 p-3 rounded-lg shadow-sm"><span>Foam/Cover Cut Stock:</span><span id="stock-foam" class="font-bold blue-dark-text">0</span></div>
+                        <div class="flex justify-between items-center text-lg bg-white/70 p-3 rounded-lg shadow-sm border-t border-pink-300 mt-4 pt-3"><span>Finished Products Stock:</span><span id="stock-products" class="font-bold blue-dark-text text-xl">0</span></div>
+                    </div>
+                </div>
+                <div id="cover-manager" class="cute-card blue-accent p-6 rounded-xl shadow-lg border-2 border-blue-accent hidden">
+                    <h3 class="text-2xl font-bold text-gray-800 card-header flex items-center"><span class="text-2xl pink-bear mr-2">💖</span> Cover Design Manager</h3>
+                    <p id="design-status-message" class="text-sm font-medium hidden pt-2 mb-4"></p>
+                    <h4 class="font-semibold text-gray-700 mb-2">Add New Design</h4>
+                    <form onsubmit="window.handleNewDesign(event)" class="space-y-3 mb-6 border-b border-gray-400 pb-4">
+                        <input type="text" name="designName" required placeholder="e.g., Blue Bears Design" class="mt-1 block w-full rounded-lg input-style">
+                        <input type="number" name="initialStock" min="0" value="0" required placeholder="Initial Stock" class="mt-1 block w-full rounded-lg input-style">
+                        <button type="submit" class="w-full btn-primary py-2 rounded-lg font-semibold text-sm">Add Design</button>
+                    </form>
+                    <h4 class="font-semibold text-gray-700 mb-3">Adjust Existing Stock</h4>
+                    <div id="current-design-list" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PROFIT TAB -->
+        <div id="tab-content-profit" class="tab-content">
+            <div class="cute-card blue-accent p-6 rounded-xl shadow-lg border-2 border-blue-accent max-w-2xl mx-auto">
+                <h2 class="text-3xl font-bold text-gray-800 card-header flex items-center"><span class="text-2xl text-pink-text mr-2">⭐</span> Owner Profit Dashboard</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div class="bg-pink-100 p-4 rounded-lg shadow-sm">
+                        <p class="text-sm text-gray-500">Total Revenue</p>
+                        <p id="total-revenue" class="text-2xl font-bold text-green-600">P0.00</p>
+                    </div>
+                    <div class="bg-pink-100 p-4 rounded-lg shadow-sm">
+                        <p class="text-sm text-gray-500">Total Material Cost (P169.88/pc)</p>
+                        <p id="total-cogs" class="text-2xl font-bold text-red-600">P0.00</p>
+                    </div>
+                </div>
+                <div class="pink-primary p-5 rounded-lg shadow-inner text-center mb-6">
+                    <p class="text-xl font-semibold text-gray-800">NET PROFIT (After all costs)</p>
+                    <p id="net-profit" class="text-4xl font-extrabold blue-dark-text">P0.00</p>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800">Owner Share Breakdown</h3>
+                <div id="owner-shares" class="bg-white mt-3 p-4 rounded-lg shadow-sm border border-pink-100"></div>
+            </div>
+        </div>
+
+        <!-- HISTORY TAB -->
+        <div id="tab-content-history" class="tab-content space-y-6">
+            <div class="cute-card bg-white p-6 rounded-xl shadow-lg border-2 border-pink-primary overflow-x-auto">
+                <h2 class="text-2xl font-bold mb-4 pink-text flex items-center"><span class="text-2xl bear-brown mr-2">📝</span> Daily Production History</h2>
+                <table class="min-w-full divide-y divide-pink-300">
+                    <thead class="pink-primary/50 text-gray-700">
+                        <tr>
+                            <th class="p-2 text-left text-sm font-semibold uppercase">Date</th><th class="p-2 text-center text-sm font-semibold uppercase">Covers</th>
+                            <th class="p-2 text-center text-sm font-semibold uppercase">Cuts</th><th class="p-2 text-center text-sm font-semibold uppercase">Assembled</th>
+                            <th class="p-2 text-center text-sm font-semibold uppercase">Sold</th><th class="p-2 text-right text-sm font-semibold uppercase">Revenue</th>
+                            <th class="p-2 text-right text-sm font-semibold uppercase">Labor Incurred</th><th class="p-2 text-center text-sm font-semibold uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body" class="divide-y divide-blue-100"></tbody>
+                </table>
+            </div>
+            <div class="cute-card bg-white p-6 rounded-xl shadow-lg border-2 border-blue-accent overflow-x-auto">
+                <h3 class="text-xl font-bold mb-4 blue-dark-text">Payment History Log</h3>
+                <table class="min-w-full divide-y divide-blue-300">
+                    <thead class="blue-accent/50 text-gray-700">
+                        <tr>
+                            <th class="p-2 text-left text-sm font-semibold uppercase">Date</th><th class="p-2 text-right text-sm font-semibold uppercase">Amount</th>
+                            <th class="p-2 text-left text-sm font-semibold uppercase">Info</th><th class="p-2 text-center text-sm font-semibold uppercase">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payments-body" class="divide-y divide-blue-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</body>
+</html>
+
